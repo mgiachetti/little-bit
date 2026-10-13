@@ -1,0 +1,8 @@
+# Tested versions. On Pascal GPUs (e.g. GTX 1080) install torch from the cu126 index:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu126
+torch>=2.14
+transformers>=5.19
+datasets>=5.1
+accelerate>=1.15
+matplotlib>=3.11   # scripts/make_figures.py only
+pytest>=9.1        # tests only

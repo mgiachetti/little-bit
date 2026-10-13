@@ -1,0 +1,25 @@
+[log cleanup: removed 598 'CUDACachingAllocator expandable_segments: memory mapping failed with OOM' warnings; allocator retried and training continued]
+device=cuda  teacher PPL (first 20 windows): 20.27
+converted in 183.5s  {"layers_bpw": 0.5495198567708334, "converted_params": 440401920, "fp16_params": 155648000, "size_mb": 325.72479248046875}
+init PPL (no training): 63348389.17
+train sequences: 4918 × 512 tokens
+trainable params: 222.2M
+step     0  loss 1261.5138  kl 17.5371  mse 124.39767  lr 1.33e-05  4s  mem 6.38G
+step    20  loss 982.9713  kl 5.6303  mse 97.73410  lr 7.96e-05  86s  mem 7.23G
+step    40  loss 952.5316  kl 6.2327  mse 94.62990  lr 7.74e-05  168s  mem 7.23G
+step    60  loss 1090.3877  kl 4.9907  mse 108.53970  lr 7.35e-05  250s  mem 7.23G
+step    80  loss 721.4734  kl 5.1287  mse 71.63448  lr 6.81e-05  332s  mem 7.23G
+step   100  loss 287.4773  kl 4.8387  mse 28.26386  lr 6.15e-05  414s  mem 7.23G
+step   120  loss 1369.1959  kl 5.1499  mse 136.40460  lr 5.38e-05  496s  mem 7.23G
+step   140  loss 328.1729  kl 4.6847  mse 32.34882  lr 4.55e-05  577s  mem 7.23G
+step   160  loss 252.0604  kl 4.2383  mse 24.78221  lr 3.70e-05  659s  mem 7.23G
+step   180  loss 399.6204  kl 4.5079  mse 39.51125  lr 2.86e-05  741s  mem 7.23G
+step   200  loss 200.3663  kl 5.1810  mse 19.51853  lr 2.07e-05  823s  mem 7.23G
+step   220  loss 173.9535  kl 4.6389  mse 16.93146  lr 1.37e-05  905s  mem 7.23G
+step   240  loss 728.0720  kl 5.0189  mse 72.30531  lr 7.94e-06  987s  mem 7.23G
+step   260  loss 189.7547  kl 4.4287  mse 18.53259  lr 3.60e-06  1069s  mem 7.23G
+step   280  loss 190.7733  kl 4.7537  mse 18.60197  lr 9.10e-07  1151s  mem 7.23G
+final WikiText-2 PPL: 2238.00  ({"layers_bpw": 0.5495198567708334, "converted_params": 440401920, "fp16_params": 155648000, "size_mb": 325.72479248046875})
+Leonardo da Vinci painted the Mona Lisa. The Mona Lisa is 1 and of the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the
+Turing is called the father of computer science. Computer science is  and . , the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the
+saved runs/ab/Qwen3-0.6B-bpw0.55-itq/littlebit.pt

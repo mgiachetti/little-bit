@@ -1,0 +1,117 @@
+device=mps  teacher PPL (first 20 windows): 29.52
+converted in 36.2s  {"layers_bpw": 0.5498589409722222, "converted_params": 84934656, "fp16_params": 40304640, "size_mb": 82.44232177734375}
+init PPL (Dual-SVID, no training): 5551.74
+train sequences: 4743 × 512 tokens
+step     0  loss 12.3710  kl 5.0606  mse 0.73104  lr 3.00e-06  3s
+step    20  loss 5.6163  kl 4.2130  mse 0.14034  lr 6.30e-05  42s
+step    40  loss 4.4908  kl 3.3690  mse 0.11219  lr 1.20e-04  81s
+step    60  loss 4.3225  kl 3.2809  mse 0.10416  lr 1.20e-04  120s
+step    80  loss 3.9614  kl 2.9392  mse 0.10222  lr 1.20e-04  159s
+step   100  loss 3.8809  kl 2.9219  mse 0.09590  lr 1.20e-04  199s
+step   120  loss 3.7713  kl 2.8181  mse 0.09532  lr 1.20e-04  236s
+step   140  loss 3.5812  kl 2.5400  mse 0.10412  lr 1.19e-04  273s
+step   160  loss 3.2427  kl 2.3318  mse 0.09109  lr 1.19e-04  311s
+step   180  loss 3.4590  kl 2.5203  mse 0.09387  lr 1.18e-04  348s
+step   200  loss 3.1749  kl 2.2605  mse 0.09145  lr 1.18e-04  385s
+step   220  loss 3.3270  kl 2.3558  mse 0.09712  lr 1.18e-04  422s
+step   240  loss 3.1293  kl 2.2681  mse 0.08612  lr 1.17e-04  459s
+step 250  eval PPL 238.58
+step   260  loss 3.0637  kl 2.2214  mse 0.08423  lr 1.16e-04  504s
+step   280  loss 3.1619  kl 2.3175  mse 0.08445  lr 1.16e-04  541s
+step   300  loss 2.8135  kl 1.9998  mse 0.08137  lr 1.15e-04  579s
+step   320  loss 2.9135  kl 2.0763  mse 0.08372  lr 1.14e-04  616s
+step   340  loss 2.8528  kl 2.0516  mse 0.08012  lr 1.13e-04  654s
+step   360  loss 2.9892  kl 2.1444  mse 0.08448  lr 1.12e-04  692s
+step   380  loss 2.8301  kl 2.0064  mse 0.08237  lr 1.11e-04  736s
+step   400  loss 2.8297  kl 2.0448  mse 0.07848  lr 1.10e-04  783s
+step   420  loss 2.8290  kl 1.9312  mse 0.08977  lr 1.09e-04  825s
+step   440  loss 2.9239  kl 2.1404  mse 0.07835  lr 1.08e-04  863s
+step   460  loss 2.5106  kl 1.7251  mse 0.07855  lr 1.07e-04  902s
+step   480  loss 2.7425  kl 1.8692  mse 0.08733  lr 1.06e-04  946s
+step 500  eval PPL 169.04
+step   500  loss 2.6218  kl 1.8068  mse 0.08150  lr 1.04e-04  1003s
+step   520  loss 2.6371  kl 1.8377  mse 0.07994  lr 1.03e-04  1051s
+step   540  loss 2.6360  kl 1.8489  mse 0.07872  lr 1.02e-04  1100s
+step   560  loss 2.4936  kl 1.6674  mse 0.08262  lr 1.00e-04  1149s
+step   580  loss 2.6187  kl 1.8568  mse 0.07620  lr 9.89e-05  1200s
+step   600  loss 2.5335  kl 1.7769  mse 0.07566  lr 9.74e-05  1254s
+step   620  loss 2.5515  kl 1.7820  mse 0.07696  lr 9.59e-05  1307s
+step   640  loss 2.4431  kl 1.6912  mse 0.07519  lr 9.43e-05  1360s
+step   660  loss 2.3238  kl 1.5655  mse 0.07582  lr 9.27e-05  1411s
+step   680  loss 2.2654  kl 1.5442  mse 0.07212  lr 9.11e-05  1462s
+step   700  loss 2.4949  kl 1.7594  mse 0.07355  lr 8.94e-05  1513s
+step   720  loss 2.3327  kl 1.6206  mse 0.07121  lr 8.78e-05  1564s
+step   740  loss 2.6436  kl 1.8786  mse 0.07650  lr 8.60e-05  1616s
+step 750  eval PPL 142.94
+step   760  loss 2.1817  kl 1.4854  mse 0.06962  lr 8.43e-05  1674s
+step   780  loss 2.2597  kl 1.5541  mse 0.07056  lr 8.25e-05  1718s
+step   800  loss 2.3046  kl 1.5695  mse 0.07351  lr 8.07e-05  1762s
+step   820  loss 2.3005  kl 1.5692  mse 0.07312  lr 7.89e-05  1808s
+step   840  loss 2.1748  kl 1.4877  mse 0.06870  lr 7.71e-05  1854s
+step   860  loss 2.1592  kl 1.4546  mse 0.07046  lr 7.52e-05  1907s
+step   880  loss 2.2324  kl 1.5304  mse 0.07020  lr 7.34e-05  1964s
+step   900  loss 2.2530  kl 1.5301  mse 0.07229  lr 7.15e-05  2021s
+step   920  loss 2.2663  kl 1.5576  mse 0.07086  lr 6.96e-05  2076s
+step   940  loss 2.3777  kl 1.6327  mse 0.07450  lr 6.77e-05  2131s
+step   960  loss 2.1347  kl 1.4300  mse 0.07047  lr 6.58e-05  2186s
+step   980  loss 2.1424  kl 1.4394  mse 0.07030  lr 6.38e-05  2241s
+step 1000  eval PPL 128.87
+step  1000  loss 2.1156  kl 1.4327  mse 0.06828  lr 6.19e-05  2309s
+step  1020  loss 2.2041  kl 1.4084  mse 0.07957  lr 6.00e-05  2364s
+step  1040  loss 2.0873  kl 1.4113  mse 0.06760  lr 5.81e-05  2420s
+step  1060  loss 2.2075  kl 1.4826  mse 0.07249  lr 5.62e-05  2475s
+step  1080  loss 2.0931  kl 1.3970  mse 0.06961  lr 5.42e-05  2530s
+step  1100  loss 2.2214  kl 1.5366  mse 0.06847  lr 5.23e-05  2586s
+step  1120  loss 2.2387  kl 1.5085  mse 0.07302  lr 5.04e-05  2643s
+step  1140  loss 2.0975  kl 1.3993  mse 0.06982  lr 4.85e-05  2698s
+step  1160  loss 2.1330  kl 1.4327  mse 0.07003  lr 4.66e-05  2753s
+step  1180  loss 1.8533  kl 1.2101  mse 0.06431  lr 4.48e-05  2809s
+step  1200  loss 2.0750  kl 1.3707  mse 0.07042  lr 4.29e-05  2871s
+step  1220  loss 1.9650  kl 1.3084  mse 0.06566  lr 4.11e-05  2926s
+step  1240  loss 2.1894  kl 1.5178  mse 0.06715  lr 3.93e-05  2982s
+step 1250  eval PPL 116.55
+step  1260  loss 2.1304  kl 1.4075  mse 0.07229  lr 3.75e-05  3050s
+step  1280  loss 2.0161  kl 1.3421  mse 0.06739  lr 3.57e-05  3107s
+step  1300  loss 2.1749  kl 1.4722  mse 0.07027  lr 3.40e-05  3177s
+step  1320  loss 2.0090  kl 1.2867  mse 0.07223  lr 3.22e-05  3245s
+step  1340  loss 2.0399  kl 1.3499  mse 0.06900  lr 3.06e-05  3301s
+step  1360  loss 1.9608  kl 1.2990  mse 0.06618  lr 2.89e-05  3357s
+step  1380  loss 1.8867  kl 1.2243  mse 0.06624  lr 2.73e-05  3414s
+step  1400  loss 1.9654  kl 1.2962  mse 0.06691  lr 2.57e-05  3469s
+step  1420  loss 1.9711  kl 1.2979  mse 0.06732  lr 2.41e-05  3525s
+step  1440  loss 1.6806  kl 1.0598  mse 0.06208  lr 2.26e-05  3581s
+step  1460  loss 2.1106  kl 1.4370  mse 0.06736  lr 2.11e-05  3636s
+step  1480  loss 1.8971  kl 1.2534  mse 0.06436  lr 1.97e-05  3691s
+step 1500  eval PPL 113.83
+step  1500  loss 2.1384  kl 1.4479  mse 0.06905  lr 1.83e-05  3759s
+step  1520  loss 1.9395  kl 1.2903  mse 0.06493  lr 1.69e-05  3814s
+step  1540  loss 1.8549  kl 1.1551  mse 0.06998  lr 1.56e-05  3872s
+step  1560  loss 1.7010  kl 1.0708  mse 0.06302  lr 1.43e-05  3928s
+step  1580  loss 1.8686  kl 1.2072  mse 0.06614  lr 1.31e-05  3985s
+step  1600  loss 1.7637  kl 1.1116  mse 0.06521  lr 1.19e-05  4035s
+step  1620  loss 2.0038  kl 1.3240  mse 0.06798  lr 1.08e-05  4071s
+step  1640  loss 1.8800  kl 1.1858  mse 0.06942  lr 9.71e-06  4107s
+step  1660  loss 1.8104  kl 1.1760  mse 0.06344  lr 8.69e-06  4143s
+step  1680  loss 1.7321  kl 1.0851  mse 0.06470  lr 7.72e-06  4179s
+step  1700  loss 1.7838  kl 1.0833  mse 0.07004  lr 6.80e-06  4215s
+step  1720  loss 1.6899  kl 1.0640  mse 0.06258  lr 5.94e-06  4251s
+step  1740  loss 1.7290  kl 1.0456  mse 0.06833  lr 5.14e-06  4287s
+step 1750  eval PPL 109.53
+step  1760  loss 1.8019  kl 1.1468  mse 0.06551  lr 4.38e-06  4331s
+step  1780  loss 1.8913  kl 1.2298  mse 0.06615  lr 3.69e-06  4367s
+step  1800  loss 1.8477  kl 1.1736  mse 0.06741  lr 3.06e-06  4403s
+step  1820  loss 1.8877  kl 1.2018  mse 0.06858  lr 2.48e-06  4439s
+step  1840  loss 1.8470  kl 1.1796  mse 0.06674  lr 1.96e-06  4475s
+step  1860  loss 1.9614  kl 1.2856  mse 0.06758  lr 1.50e-06  4511s
+step  1880  loss 1.7518  kl 1.0886  mse 0.06632  lr 1.11e-06  4547s
+step  1900  loss 1.6838  kl 1.0535  mse 0.06302  lr 7.69e-07  4583s
+step  1920  loss 1.7596  kl 1.1169  mse 0.06427  lr 4.93e-07  4619s
+step  1940  loss 1.7945  kl 1.1473  mse 0.06471  lr 2.77e-07  4655s
+step  1960  loss 1.7908  kl 1.1451  mse 0.06457  lr 1.23e-07  4691s
+step  1980  loss 1.8033  kl 1.1625  mse 0.06408  lr 3.08e-08  4727s
+final WikiText-2 PPL: 132.65  ({"layers_bpw": 0.5498589409722222, "converted_params": 84934656, "fp16_params": 40304640, "size_mb": 82.44232177734375})
+Leonardo da Vinci painted the Mona Lisa. The Mona Lisa is a painting of the Monastery, a painting of the Monastery in the city of San Francisco.
+The painting is a painting of the Monastery of the Monastery.  The Monastery, a painting of the Monastery, a portrait of the Monastery and a painting of the Monastery
+Turing is called the father of computer science. Computer science is a very good and interesting, well--scscopic, and is a very rare and well--type of technology.
+The first time we have to be able to find the world's's's's's's's's's's's's's's's's's's "the "
+saved runs/opt-125m-bpw0.55-itq/littlebit.pt

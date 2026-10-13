@@ -1,0 +1,25 @@
+[log cleanup: removed 596 'CUDACachingAllocator expandable_segments: memory mapping failed with OOM' warnings; allocator retried and training continued]
+device=cuda  teacher PPL (first 20 windows): 20.27
+converted in 184.0s  {"layers_bpw": 0.5495198567708334, "body_bpw": 0.5495198567708334, "converted_params": 440401920, "fp16_params": 155648000, "size_mb": 325.72479248046875}
+init PPL (no training): 63348389.17
+train sequences: 4918 × 512 tokens
+trainable params: 222.2M
+step     0  loss 31.4185  kl 17.5371  mse 1.38814  lr 1.33e-05  4s  mem 6.38G
+step    20  loss 12.9464  kl 5.3294  mse 0.76170  lr 7.96e-05  86s  mem 7.23G
+step    40  loss 12.3942  kl 5.8074  mse 0.65868  lr 7.74e-05  168s  mem 7.23G
+step    60  loss 11.1243  kl 4.7386  mse 0.63857  lr 7.35e-05  250s  mem 7.23G
+step    80  loss 10.9628  kl 4.8604  mse 0.61024  lr 6.81e-05  332s  mem 7.23G
+step   100  loss 10.1392  kl 4.4533  mse 0.56859  lr 6.15e-05  414s  mem 7.23G
+step   120  loss 10.7688  kl 4.6882  mse 0.60806  lr 5.38e-05  496s  mem 7.23G
+step   140  loss 9.9060  kl 4.3447  mse 0.55613  lr 4.55e-05  578s  mem 7.23G
+step   160  loss 9.2727  kl 3.8284  mse 0.54443  lr 3.70e-05  660s  mem 7.23G
+step   180  loss 9.2553  kl 3.7699  mse 0.54855  lr 2.86e-05  742s  mem 7.23G
+step   200  loss 9.9188  kl 4.2107  mse 0.57081  lr 2.07e-05  824s  mem 7.23G
+step   220  loss 9.0281  kl 3.5640  mse 0.54641  lr 1.37e-05  906s  mem 7.23G
+step   240  loss 9.3562  kl 3.7820  mse 0.55742  lr 7.94e-06  988s  mem 7.23G
+step   260  loss 8.8096  kl 3.4639  mse 0.53457  lr 3.60e-06  1071s  mem 7.23G
+step   280  loss 9.2106  kl 3.5314  mse 0.56793  lr 9.10e-07  1153s  mem 7.23G
+final WikiText-2 PPL: 819.67  ({"layers_bpw": 0.5495198567708334, "body_bpw": 0.5495198567708334, "converted_params": 440401920, "fp16_params": 155648000, "size_mb": 325.72479248046875})
+Leonardo da Vinci painted the Mona Lisa. The Mona Lisa is the the 102, 1984 and the the 15. 13 17 16 100 100 100 100 100 100 100 100
+Turing is called the father of computer science. Computer science is a the 1098 , and the the 2000, 1000 1000 1000 4 300 5 600 17 100 100 100 
+saved runs/ab/Qwen3-0.6B-bpw0.55-itq-msenorm-skip1/littlebit.pt

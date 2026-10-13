@@ -1,0 +1,26 @@
+[log cleanup: removed 596 'CUDACachingAllocator expandable_segments: memory mapping failed with OOM' warnings; allocator retried and training continued]
+Could not reach the Hub ([Errno 104] Connection reset by peer). Using cached commit hash for 'Qwen/Qwen3-0.6B'.
+device=cuda  teacher PPL (first 20 windows): 20.27
+converted in 184.0s  {"layers_bpw": 0.5495198567708334, "body_bpw": 0.5495198567708334, "converted_params": 440401920, "fp16_params": 155648000, "size_mb": 325.72479248046875}
+init PPL (no training): 63348389.17
+train sequences: 4918 × 512 tokens
+trainable params: 222.2M
+step     0  loss 527.7004  kl 17.5371  mse 51.01633  lr 1.33e-05  4s  mem 6.38G
+step    20  loss 177.1858  kl 5.5467  mse 17.16392  lr 7.96e-05  86s  mem 7.23G
+step    40  loss 186.1278  kl 6.0810  mse 18.00468  lr 7.74e-05  168s  mem 7.23G
+step    60  loss 174.0817  kl 4.8153  mse 16.92664  lr 7.35e-05  250s  mem 7.23G
+step    80  loss 174.8626  kl 4.9671  mse 16.98955  lr 6.81e-05  332s  mem 7.23G
+step   100  loss 155.2462  kl 4.6597  mse 15.05865  lr 6.15e-05  415s  mem 7.23G
+step   120  loss 170.9715  kl 4.9307  mse 16.60408  lr 5.38e-05  497s  mem 7.23G
+step   140  loss 157.1849  kl 4.5224  mse 15.26626  lr 4.55e-05  579s  mem 7.23G
+step   160  loss 149.6590  kl 4.1080  mse 14.55509  lr 3.70e-05  661s  mem 7.23G
+step   180  loss 144.5154  kl 4.1964  mse 14.03190  lr 2.86e-05  743s  mem 7.23G
+step   200  loss 159.1304  kl 4.7727  mse 15.43578  lr 2.07e-05  825s  mem 7.23G
+step   220  loss 146.4191  kl 4.1016  mse 14.23174  lr 1.37e-05  908s  mem 7.23G
+step   240  loss 159.4697  kl 4.3806  mse 15.50891  lr 7.94e-06  990s  mem 7.23G
+step   260  loss 137.1859  kl 3.8885  mse 13.32974  lr 3.60e-06  1072s  mem 7.23G
+step   280  loss 163.0332  kl 4.1100  mse 15.89233  lr 9.10e-07  1154s  mem 7.23G
+final WikiText-2 PPL: 1234.31  ({"layers_bpw": 0.5495198567708334, "body_bpw": 0.5495198567708334, "converted_params": 440401920, "fp16_params": 155648000, "size_mb": 325.72479248046875})
+Leonardo da Vinci painted the Mona Lisa. The Mona Lisa is the the the the the the the the the the the the the the  and in the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the
+Turing is called the father of computer science. Computer science is the the the the the the the the the the the the the the the the the the the the the the the the the the the  , and in the the the the the the the the the the the the the the the the the the the the the the the the the the the the the
+saved runs/ab/Qwen3-0.6B-bpw0.55-itq-skip1/littlebit.pt

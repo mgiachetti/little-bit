@@ -1,0 +1,117 @@
+[log cleanup: removed 3996 'CUDACachingAllocator expandable_segments: memory mapping failed with OOM' warnings; allocator retried and training continued]
+device=cuda  teacher PPL (first 20 windows): 20.27
+converted in 183.8s  {"layers_bpw": 0.5495198567708334, "body_bpw": 0.5495198567708334, "converted_params": 440401920, "fp16_params": 155648000, "size_mb": 325.72479248046875}
+init PPL (no training): 63348389.17
+train sequences: 4918 × 512 tokens
+trainable params: 222.2M
+step     0  loss 31.4185  kl 17.5371  mse 1.38814  lr 2.00e-06  4s  mem 6.38G
+step    20  loss 17.5358  kl 7.4212  mse 1.01146  lr 4.20e-05  86s  mem 7.23G
+step    40  loss 13.2935  kl 6.0209  mse 0.72727  lr 8.00e-05  168s  mem 7.23G
+step    60  loss 11.4007  kl 4.7859  mse 0.66148  lr 8.00e-05  250s  mem 7.23G
+step    80  loss 11.0547  kl 4.8524  mse 0.62023  lr 7.99e-05  331s  mem 7.23G
+step   100  loss 10.2993  kl 4.5491  mse 0.57502  lr 7.98e-05  414s  mem 7.23G
+step   120  loss 10.8226  kl 4.7669  mse 0.60557  lr 7.97e-05  495s  mem 7.23G
+step   140  loss 9.8825  kl 4.3574  mse 0.55251  lr 7.95e-05  577s  mem 7.23G
+step   160  loss 9.2055  kl 3.7904  mse 0.54151  lr 7.93e-05  659s  mem 7.23G
+step   180  loss 9.2012  kl 3.7788  mse 0.54224  lr 7.90e-05  741s  mem 7.23G
+step   200  loss 9.6486  kl 4.0460  mse 0.56026  lr 7.87e-05  823s  mem 7.23G
+step   220  loss 8.6149  kl 3.3380  mse 0.52769  lr 7.83e-05  905s  mem 7.23G
+step   240  loss 8.8858  kl 3.5586  mse 0.53271  lr 7.80e-05  987s  mem 7.23G
+step 250  eval PPL 516.75
+step   260  loss 8.3491  kl 3.2648  mse 0.50843  lr 7.75e-05  1082s  mem 7.23G
+step   280  loss 8.6401  kl 3.2893  mse 0.53508  lr 7.71e-05  1164s  mem 7.23G
+step   300  loss 8.7443  kl 3.7216  mse 0.50227  lr 7.66e-05  1246s  mem 7.23G
+step   320  loss 8.2335  kl 3.1533  mse 0.50802  lr 7.60e-05  1328s  mem 7.23G
+step   340  loss 8.6856  kl 3.6646  mse 0.50211  lr 7.55e-05  1410s  mem 7.23G
+step   360  loss 7.7439  kl 2.9731  mse 0.47707  lr 7.49e-05  1492s  mem 7.23G
+step   380  loss 7.5116  kl 2.7968  mse 0.47148  lr 7.42e-05  1573s  mem 7.23G
+step   400  loss 7.6193  kl 2.7712  mse 0.48481  lr 7.35e-05  1655s  mem 7.23G
+step   420  loss 8.0950  kl 3.1988  mse 0.48961  lr 7.28e-05  1737s  mem 7.23G
+step   440  loss 8.0387  kl 3.1796  mse 0.48591  lr 7.21e-05  1819s  mem 7.23G
+step   460  loss 7.4378  kl 2.7590  mse 0.46788  lr 7.13e-05  1902s  mem 7.23G
+step   480  loss 7.3792  kl 2.9286  mse 0.44506  lr 7.05e-05  1983s  mem 7.23G
+step 500  eval PPL 346.06
+step   500  loss 7.1157  kl 2.5165  mse 0.45992  lr 6.96e-05  2078s  mem 7.23G
+step   520  loss 7.7911  kl 3.1712  mse 0.46199  lr 6.87e-05  2160s  mem 7.23G
+step   540  loss 7.9463  kl 3.2153  mse 0.47310  lr 6.78e-05  2242s  mem 7.23G
+step   560  loss 7.0678  kl 2.5280  mse 0.45398  lr 6.69e-05  2324s  mem 7.23G
+step   580  loss 7.0596  kl 2.6283  mse 0.44313  lr 6.59e-05  2406s  mem 7.23G
+step   600  loss 7.0913  kl 2.6827  mse 0.44086  lr 6.49e-05  2488s  mem 7.23G
+step   620  loss 7.4187  kl 2.9695  mse 0.44492  lr 6.39e-05  2570s  mem 7.23G
+step   640  loss 6.9406  kl 2.6145  mse 0.43262  lr 6.29e-05  2652s  mem 7.23G
+step   660  loss 10.6778  kl 2.7137  mse 0.79641  lr 6.18e-05  2735s  mem 7.23G
+step   680  loss 6.7827  kl 2.4362  mse 0.43465  lr 6.07e-05  2817s  mem 7.23G
+step   700  loss 7.2593  kl 2.7665  mse 0.44928  lr 5.96e-05  2899s  mem 7.23G
+step   720  loss 6.2301  kl 2.0808  mse 0.41493  lr 5.85e-05  2981s  mem 7.23G
+step   740  loss 6.3730  kl 2.2460  mse 0.41270  lr 5.74e-05  3063s  mem 7.23G
+step 750  eval PPL 241.92
+step   760  loss 6.0561  kl 2.0418  mse 0.40142  lr 5.62e-05  3158s  mem 7.23G
+step   780  loss 6.7370  kl 2.4980  mse 0.42391  lr 5.50e-05  3239s  mem 7.23G
+step   800  loss 6.3951  kl 2.3431  mse 0.40519  lr 5.38e-05  3321s  mem 7.23G
+step   820  loss 6.3417  kl 2.1694  mse 0.41723  lr 5.26e-05  3404s  mem 7.23G
+step   840  loss 6.2169  kl 2.2379  mse 0.39790  lr 5.14e-05  3486s  mem 7.23G
+step   860  loss 7.9017  kl 3.5178  mse 0.43839  lr 5.01e-05  3568s  mem 7.23G
+step   880  loss 6.5557  kl 2.4462  mse 0.41095  lr 4.89e-05  3650s  mem 7.23G
+step   900  loss 6.7079  kl 2.3812  mse 0.43267  lr 4.76e-05  3732s  mem 7.23G
+step   920  loss 6.6518  kl 2.5067  mse 0.41451  lr 4.64e-05  3814s  mem 7.23G
+step   940  loss 6.9845  kl 2.7068  mse 0.42777  lr 4.51e-05  3897s  mem 7.23G
+step   960  loss 6.9692  kl 2.7602  mse 0.42090  lr 4.38e-05  3979s  mem 7.23G
+step   980  loss 6.5349  kl 2.3482  mse 0.41866  lr 4.26e-05  4061s  mem 7.23G
+step 1000  eval PPL 218.90
+step  1000  loss 6.1700  kl 2.0319  mse 0.41381  lr 4.13e-05  4155s  mem 7.23G
+step  1020  loss 5.8455  kl 1.9582  mse 0.38873  lr 4.00e-05  4238s  mem 7.23G
+step  1040  loss 5.8359  kl 2.0443  mse 0.37916  lr 3.87e-05  4320s  mem 7.23G
+step  1060  loss 6.4622  kl 2.4101  mse 0.40521  lr 3.74e-05  4402s  mem 7.23G
+step  1080  loss 5.7487  kl 1.7648  mse 0.39839  lr 3.62e-05  4484s  mem 7.23G
+step  1100  loss 6.1405  kl 2.1189  mse 0.40216  lr 3.49e-05  4566s  mem 7.23G
+step  1120  loss 7.2443  kl 2.8372  mse 0.44072  lr 3.36e-05  4648s  mem 7.23G
+step  1140  loss 5.8602  kl 2.1280  mse 0.37322  lr 3.24e-05  4730s  mem 7.23G
+step  1160  loss 5.7765  kl 1.9297  mse 0.38468  lr 3.11e-05  4812s  mem 7.23G
+step  1180  loss 5.9981  kl 2.1824  mse 0.38157  lr 2.99e-05  4894s  mem 7.23G
+step  1200  loss 5.9800  kl 2.0782  mse 0.39018  lr 2.86e-05  4976s  mem 7.23G
+step  1220  loss 5.7746  kl 1.9871  mse 0.37875  lr 2.74e-05  5058s  mem 7.23G
+step  1240  loss 5.9292  kl 2.0741  mse 0.38550  lr 2.62e-05  5141s  mem 7.23G
+step 1250  eval PPL 189.52
+step  1260  loss 6.4370  kl 2.4064  mse 0.40306  lr 2.50e-05  5235s  mem 7.23G
+step  1280  loss 6.5746  kl 2.5559  mse 0.40187  lr 2.38e-05  5317s  mem 7.23G
+step  1300  loss 5.7845  kl 1.8853  mse 0.38991  lr 2.26e-05  5399s  mem 7.23G
+step  1320  loss 6.6797  kl 2.5385  mse 0.41412  lr 2.15e-05  5481s  mem 7.23G
+step  1340  loss 5.3935  kl 1.6388  mse 0.37548  lr 2.04e-05  5564s  mem 7.23G
+step  1360  loss 5.4162  kl 1.5337  mse 0.38825  lr 1.93e-05  5646s  mem 7.23G
+step  1380  loss 5.5288  kl 1.7548  mse 0.37740  lr 1.82e-05  5728s  mem 7.23G
+step  1400  loss 5.8725  kl 2.0221  mse 0.38504  lr 1.71e-05  5810s  mem 7.23G
+step  1420  loss 5.4964  kl 1.8339  mse 0.36625  lr 1.61e-05  5892s  mem 7.23G
+step  1440  loss 5.8486  kl 1.9809  mse 0.38677  lr 1.51e-05  5974s  mem 7.23G
+step  1460  loss 5.3848  kl 1.6992  mse 0.36855  lr 1.41e-05  6056s  mem 7.23G
+step  1480  loss 5.8282  kl 2.0317  mse 0.37965  lr 1.31e-05  6138s  mem 7.23G
+step 1500  eval PPL 172.52
+step  1500  loss 6.6624  kl 2.5914  mse 0.40710  lr 1.22e-05  6233s  mem 7.23G
+step  1520  loss 6.6827  kl 2.5809  mse 0.41019  lr 1.13e-05  6315s  mem 7.23G
+step  1540  loss 5.6252  kl 1.8297  mse 0.37955  lr 1.04e-05  6397s  mem 7.23G
+step  1560  loss 5.6327  kl 1.9358  mse 0.36969  lr 9.54e-06  6479s  mem 7.23G
+step  1580  loss 5.0306  kl 1.3902  mse 0.36404  lr 8.73e-06  6562s  mem 7.23G
+step  1600  loss 5.5460  kl 1.8962  mse 0.36498  lr 7.94e-06  6644s  mem 7.23G
+step  1620  loss 5.5395  kl 1.8510  mse 0.36885  lr 7.19e-06  6726s  mem 7.23G
+step  1640  loss 5.3871  kl 1.5093  mse 0.38778  lr 6.48e-06  6808s  mem 7.23G
+step  1660  loss 5.6849  kl 1.9613  mse 0.37236  lr 5.79e-06  6890s  mem 7.23G
+step  1680  loss 6.1132  kl 2.1854  mse 0.39278  lr 5.15e-06  6972s  mem 7.23G
+step  1700  loss 5.4567  kl 1.8464  mse 0.36103  lr 4.54e-06  7055s  mem 7.23G
+step  1720  loss 5.2718  kl 1.5625  mse 0.37093  lr 3.96e-06  7136s  mem 7.23G
+step  1740  loss 6.2180  kl 2.2846  mse 0.39334  lr 3.42e-06  7218s  mem 7.23G
+step 1750  eval PPL 161.99
+step  1760  loss 5.2794  kl 1.6741  mse 0.36054  lr 2.92e-06  7313s  mem 7.23G
+step  1780  loss 5.5474  kl 1.9280  mse 0.36194  lr 2.46e-06  7395s  mem 7.23G
+step  1800  loss 5.8844  kl 2.0135  mse 0.38709  lr 2.04e-06  7477s  mem 7.23G
+step  1820  loss 5.1529  kl 1.4970  mse 0.36560  lr 1.65e-06  7559s  mem 7.23G
+step  1840  loss 5.1244  kl 1.4339  mse 0.36905  lr 1.31e-06  7641s  mem 7.23G
+step  1860  loss 5.7976  kl 2.0435  mse 0.37541  lr 1.00e-06  7723s  mem 7.23G
+step  1880  loss 4.8236  kl 1.3016  mse 0.35220  lr 7.38e-07  7805s  mem 7.23G
+step  1900  loss 5.5137  kl 1.7571  mse 0.37566  lr 5.13e-07  7888s  mem 7.23G
+step  1920  loss 6.0401  kl 2.2857  mse 0.37544  lr 3.28e-07  7970s  mem 7.23G
+step  1940  loss 5.5428  kl 1.9262  mse 0.36166  lr 1.85e-07  8052s  mem 7.23G
+step  1960  loss 5.0320  kl 1.5033  mse 0.35287  lr 8.22e-08  8134s  mem 7.23G
+step  1980  loss 4.6896  kl 1.1385  mse 0.35511  lr 2.06e-08  8216s  mem 7.23G
+final WikiText-2 PPL: 218.35  ({"layers_bpw": 0.5495198567708334, "body_bpw": 0.5495198567708334, "converted_params": 440401920, "fp16_params": 155648000, "size_mb": 325.72479248046875})
+Leonardo da Vinci painted the Mona Lisa. The Mona Lisa is a very beautiful, beautiful and beautiful, beautiful, beauty of the world. in the 1980s. 2007. 2006 , which was the first ever known to the most famous artists in the 1980s . In 20
+Turing is called the father of computer science. Computer science is a new, 1900s and 1985. 1986 . The first year , the first to the 1987s , the first time in the 1980s , the first was the first to be the first to the
+saved runs/Qwen3-0.6B-bpw0.55-itq-msenorm-skip1/littlebit.pt

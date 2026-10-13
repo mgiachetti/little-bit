@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+.pytest_cache/
+runs/
+*.pt
+# Papers are linked from the README rather than redistributed.
+*.pdf
+.DS_Store
