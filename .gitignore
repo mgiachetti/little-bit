@@ -6,3 +6,4 @@ runs/
 # Papers are linked from the README rather than redistributed.
 *.pdf
 .DS_Store
+applications/
