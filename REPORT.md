@@ -186,6 +186,10 @@ Reloading the run C checkpoint with `eval_checkpoint.py` reproduces PPL 36.43 an
 4. **Bit-packing and a packed inference kernel**, to report real memory and latency.
 5. **Zero-shot benchmarks**, to complement perplexity.
 
+## Acknowledgements
+
+The experiments in this report ran on a personal GTX 1080. GPU compute for the next steps above is sponsored by [CloudRift](https://cloudrift.ai) through their AI research grant.
+
 ## References
 
 - B. Lee, D. Kim, Y. You, Y. Kim. *LittleBit: Ultra Low-Bit Quantization via Latent Factorization.* NeurIPS 2025. [arXiv:2506.13771](https://arxiv.org/abs/2506.13771)

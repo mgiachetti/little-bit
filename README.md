@@ -82,6 +82,10 @@ This is research code: single runs, perplexity-only evaluation, and no bit-packe
 
 The method is by Banseok Lee, Dongkyu Kim, Youngcheon You and Youngmin Kim (Samsung Research). This repository is an independent re-implementation from the papers and is not affiliated with the authors. Official code: [SamsungLabs/LittleBit](https://github.com/SamsungLabs/LittleBit).
 
+## Acknowledgements
+
+GPU compute for the next round of experiments (1B-token runs, ablations and larger models) is sponsored by [CloudRift](https://cloudrift.ai) through their AI research grant. The results above ran on a personal GTX 1080.
+
 ## License
 
 MIT, for this implementation. Models and datasets keep their own licenses.
