@@ -107,6 +107,8 @@ def main():
     p.add_argument("--eval-len", type=int, default=2048)
     p.add_argument("--eval-every", type=int, default=500)
     p.add_argument("--eval-batches", type=int, default=40, help="cap for periodic evals (final eval is full)")
+    p.add_argument("--precision", choices=["fp32", "tf32", "bf16"], default="fp32",
+                   help="bf16 = autocast forward with FP32 master weights (CUDA)")
     p.add_argument("--device", default="auto")
     p.add_argument("--out", default="runs")
     p.add_argument("--tag", default="", help="suffix for the run directory")
@@ -116,6 +118,7 @@ def main():
 
     torch.manual_seed(0)
     device = pick_device(args.device)
+    autocast = torch.autocast(device.type, dtype=torch.bfloat16, enabled=args.precision == "bf16")
     run_dir = Path(args.out) / (f"{args.model.split('/')[-1]}-bpw{args.bpw}-{args.init}"
                                + ("-msenorm" if args.mse_norm else "")
                                + (f"-skip{args.mse_skip_first}" if args.mse_skip_first else "")
@@ -143,6 +146,8 @@ def main():
     if args.grad_ckpt:
         student.config.use_cache = False
         student.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+    if args.precision != "fp32":  # after conversion, so the SVD/ITQ init stays in full FP32
+        torch.backends.cuda.matmul.allow_tf32 = torch.backends.cudnn.allow_tf32 = True
     rep = bpw_report(student)
     print(f"converted in {time.time() - t0:.1f}s  {json.dumps(rep)}")
     print(f"init PPL (no training): "
@@ -174,7 +179,8 @@ def main():
                 cursor = 0
             ids = data[cursor:cursor + args.batch_size].to(device)
             cursor += args.batch_size
-            loss, kl, mse = kd_loss(student, teacher, ids, args.lam, args.mse_norm, args.mse_skip_first)
+            with autocast:
+                loss, kl, mse = kd_loss(student, teacher, ids, args.lam, args.mse_norm, args.mse_skip_first)
             (loss / args.grad_accum).backward()
         torch.nn.utils.clip_grad_norm_(params, 1.0)
         opt.step()
