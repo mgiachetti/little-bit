@@ -40,6 +40,29 @@ def test_batched_init_matches_per_expert():
         assert torch.allclose(w_batched, w_single, atol=1e-4)
 
 
+def _binarized(U, V, h, g, l):
+    return (h[..., None] * torch.sign(U) * l[..., None, :]) @ (torch.sign(V) * g[..., None]).mT
+
+
+@pytest.mark.parametrize("init", ["svid", "itq"])
+def test_fast_init_matches_exact(init):
+    torch.manual_seed(0)
+    w = torch.randn(4, 48, 32) @ torch.diag(torch.linspace(1, 0.1, 32))
+    out = {}
+    for fast in (False, True):
+        torch.manual_seed(1)
+        U, V, h, g, l = dual_svid(w, 8, init, fast=fast)
+        out[fast] = U, V, _binarized(U, V, h, g, l)
+    U, V, wb = out[True]
+    ref_lowrank = out[False][0] @ out[False][1].mT
+    assert torch.allclose(U @ V.mT, ref_lowrank, atol=1e-4)  # same rank-r W, R exactly orthogonal
+    if init == "svid":  # singular vectors may flip sign, which leaves the binarized W unchanged
+        assert torch.allclose(wb, out[False][2], atol=1e-4)
+    else:  # ITQ starts from sign-flipped vectors, so only its quality is comparable
+        err = {f: (o[2] - w).norm() / w.norm() for f, o in out.items()}
+        assert err[True] < err[False] * 1.05
+
+
 @pytest.mark.parametrize("init", ["svid", "itq"])
 def test_experts_forward_matches_reference(init):
     model = tiny_moe()

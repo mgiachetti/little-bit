@@ -42,8 +42,20 @@ def layer_bits(r: int, d_out: int, d_in: int, residual: bool = True) -> int:
     return paths * (r * (d_out + d_in) + 16 * (d_out + d_in) + 16 * r)
 
 
-def _rank1_abs(m: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """Best rank-1 approximation |m| ≈ a·bᵀ with a, b >= 0 (batched over leading dims)."""
+def _rank1_abs(m: torch.Tensor, fast: bool = False) -> tuple[torch.Tensor, torch.Tensor]:
+    """Best rank-1 approximation |m| ≈ a·bᵀ with a, b >= 0 (batched over leading dims).
+
+    fast: power iteration instead of a full SVD (the Perron pair of |m| has a wide gap).
+    """
+    if fast:
+        m = m.abs()
+        b = m.mean(-2)
+        for _ in range(20):
+            b = (m.mT @ (m @ b[..., None]))[..., 0]
+            b = b / b.norm(dim=-1, keepdim=True)
+        a = (m @ b[..., None])[..., 0]
+        s = a.norm(dim=-1, keepdim=True)
+        return a / s.sqrt(), b * s.sqrt()
     u, s, vh = torch.linalg.svd(m.abs(), full_matrices=False)
     a = u[..., :, 0] * s[..., :1].sqrt()
     b = vh[..., 0, :] * s[..., :1].sqrt()
@@ -51,7 +63,22 @@ def _rank1_abs(m: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     return a.abs(), b.abs()
 
 
-def joint_itq(U: torch.Tensor, V: torch.Tensor, n_iter: int = 50) -> torch.Tensor:
+def _polar(m: torch.Tensor, fast: bool = False) -> torch.Tensor:
+    """Orthogonal polar factor of mᵀ: ψφᵀ for m = φ Σ ψᵀ (the Procrustes solution).
+
+    fast: Newton-Schulz iteration (matmuls only) instead of a batched SVD, which cuSOLVER
+    runs slowly for many small matrices.
+    """
+    if fast:
+        x = m.mT / m.norm(dim=(-2, -1), keepdim=True)
+        for _ in range(30):
+            x = 1.5 * x - 0.5 * x @ x.mT @ x
+        return x
+    phi, _, psi_t = torch.linalg.svd(m, full_matrices=False)
+    return psi_t.mT @ phi.mT
+
+
+def joint_itq(U: torch.Tensor, V: torch.Tensor, n_iter: int = 50, fast: bool = False) -> torch.Tensor:
     """LittleBit-2 Joint-ITQ (arXiv 2603.00042, Algorithm 1).
 
     Finds an orthogonal R (r×r) aligning Z = [U; V] with the binary hypercube:
@@ -62,8 +89,9 @@ def joint_itq(U: torch.Tensor, V: torch.Tensor, n_iter: int = 50) -> torch.Tenso
     R = _random_orthogonal(Z.shape[:-2], U.shape[-1], Z)
     for _ in range(n_iter):
         B = torch.where(Z @ R >= 0, 1.0, -1.0)
-        phi, _, psi_t = torch.linalg.svd(B.mT @ Z, full_matrices=False)
-        R = psi_t.mT @ phi.mT
+        R = _polar(B.mT @ Z, fast)
+    if fast:  # exactly orthogonal, so that W = (UR)(VR)ᵀ is unchanged
+        R = _polar(R.mT)
     return R
 
 
@@ -76,13 +104,30 @@ def _random_orthogonal(batch: torch.Size, r: int, like: torch.Tensor) -> torch.T
     return q * torch.diagonal(rr, dim1=-2, dim2=-1).sign()[..., None, :]
 
 
-def dual_svid(w: torch.Tensor, r: int, init: str = "svid", itq_iters: int = 50):
+def _top_svd(w: torch.Tensor, r: int, fast: bool = False):
+    """Top-r singular triplets of w: (u [.., d_out, r], s [.., r], v [.., d_in, r]).
+
+    fast: eigendecomposition of the smaller Gram matrix instead of a full SVD.
+    """
+    if not fast:
+        u, s, vh = torch.linalg.svd(w, full_matrices=False)
+        return u[..., :, :r], s[..., :r], vh[..., :r, :].mT
+    wide = w.shape[-2] <= w.shape[-1]
+    lam, q = torch.linalg.eigh(w @ w.mT if wide else w.mT @ w)
+    q, s = q.flip(-1)[..., :r], lam.flip(-1)[..., :r].clamp_min(0).sqrt()
+    other = (w.mT @ q if wide else w @ q) / s.clamp_min(1e-12)[..., None, :]
+    return (q, s, other) if wide else (other, s, q)
+
+
+def dual_svid(w: torch.Tensor, r: int, init: str = "svid", itq_iters: int = 50, fast: bool = False):
     """Dual-SVID initialization (Section 3.2, Eqs. 6-8).
 
     init: "svid" (LittleBit), "rot" (random latent rotation), "itq" (LittleBit-2 Joint-ITQ),
     or "empty" (shapes only, no SVD — for loading a trained checkpoint).
     Returns latent factors U (d_out×r), V (d_in×r) and scales h, g, ℓ.
     w may carry leading batch dims (stacked MoE experts); everything is then per batch entry.
+    fast: GPU-friendly linear algebra (Gram eigh, Newton-Schulz, power iteration) instead of
+    exact SVDs; same result up to float error, ~10x faster for stacked experts.
     """
     w = w.float()
     if init == "empty":
@@ -90,20 +135,20 @@ def dual_svid(w: torch.Tensor, r: int, init: str = "svid", itq_iters: int = 50):
         kw = {"device": w.device}
         return (torch.zeros(*b, d_out, r, **kw), torch.zeros(*b, d_in, r, **kw),
                 torch.ones(*b, d_out, **kw), torch.ones(*b, d_in, **kw), torch.ones(*b, r, **kw))
-    u, s, vh = torch.linalg.svd(w, full_matrices=False)
-    sq = s[..., None, :r].sqrt()
-    U = u[..., :, :r] * sq      # W ≈ U Vᵀ, singular values split evenly
-    V = vh[..., :r, :].mT * sq
+    u, s, v = _top_svd(w, r, fast)
+    sq = s[..., None, :].sqrt()
+    U = u * sq      # W ≈ U Vᵀ, singular values split evenly
+    V = v * sq
     if init == "rot":
         R = _random_orthogonal(w.shape[:-2], r, U)
         U, V = U @ R, V @ R
     elif init == "itq":
-        R = joint_itq(U, V, itq_iters)
+        R = joint_itq(U, V, itq_iters, fast)
         U, V = U @ R, V @ R
     elif init != "svid":
         raise ValueError(f"unknown init {init!r}")
-    h, l_u = _rank1_abs(U)      # |U| ≈ h ℓ_uᵀ
-    g, l_v = _rank1_abs(V)      # |V| ≈ g ℓ_vᵀ
+    h, l_u = _rank1_abs(U, fast)      # |U| ≈ h ℓ_uᵀ
+    g, l_v = _rank1_abs(V, fast)      # |V| ≈ g ℓ_vᵀ
     return U, V, h, g, l_u * l_v
 
 

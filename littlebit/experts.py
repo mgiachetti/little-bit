@@ -12,6 +12,8 @@ and the primary and residual paths are concatenated along the rank, so both path
 together are still two grouped matmuls.
 """
 
+import warnings
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -37,13 +39,46 @@ def grouped_mm(x: torch.Tensor, w: torch.Tensor, offs: torch.Tensor) -> torch.Te
     return torch.cat(out)
 
 
+def _scaled_signs(paths: list[tuple[torch.Tensor, ...]], k: float, dtype: torch.dtype):
+    """Concatenated scaled binary factors of all paths, rank padded to a multiple of 8.
+
+    A = [g ⊙ sign(V)]  [E, d_in, R],  B = [h ⊙ sign(U) ⊙ ℓ]ᵀ  [E, R, d_out].
+    This is pure elementwise work over every expert's latents and, unfused, costs far more
+    than the grouped matmuls themselves; on CUDA it is compiled into a few fused kernels.
+    """
+    a = torch.cat([smooth_sign(V, k) * g[..., None] for U, V, h, g, l in paths], -1)
+    b = torch.cat([smooth_sign(U, k) * h[..., None] * l[..., None, :] for U, V, h, g, l in paths], -1)
+    pad = -a.shape[-1] % 8  # grouped GEMM kernels need 16-byte strides; zero rank columns are inert
+    if pad:
+        a, b = F.pad(a, (0, pad)), F.pad(b, (0, pad))
+    return a.to(dtype), b.mT.to(dtype)
+
+
+_scaled_signs_compiled = torch.compile(_scaled_signs, dynamic=False)
+_compile_ok = True
+
+
+def scaled_signs(paths: list[tuple[torch.Tensor, ...]], k: float, dtype: torch.dtype):
+    """_scaled_signs, compiled where Triton works (CUDA sm70+), eager otherwise or if compiling fails."""
+    global _compile_ok
+    x = paths[0][0]
+    if _compile_ok and x.is_cuda and torch.cuda.get_device_capability(x.device) >= (7, 0):
+        try:
+            return _scaled_signs_compiled(paths, k, dtype)
+        except Exception as e:  # e.g. no C compiler / Python headers for Triton
+            warnings.warn(f"torch.compile unavailable, using eager LittleBit expert factors: {e!r:.200}")
+            _compile_ok = False
+    return _scaled_signs(paths, k, dtype)
+
+
 class _GroupedPath(nn.Module):
     """One binarized low-rank path for E stacked experts."""
 
-    def __init__(self, w: torch.Tensor, r: int, k: float, init: str = "svid", chunk: int = 16):
+    def __init__(self, w: torch.Tensor, r: int, k: float, init: str = "svid", chunk: int = 16,
+                 fast: bool = True):
         super().__init__()
-        # Batched SVDs of all experts at once need several GB of workspace; do `chunk` experts at a time.
-        parts = [dual_svid(w[i:i + chunk], r, init) for i in range(0, w.shape[0], chunk)]
+        # Batched decompositions of all experts at once need several GB of workspace; do `chunk` at a time.
+        parts = [dual_svid(w[i:i + chunk], r, init, fast=fast) for i in range(0, w.shape[0], chunk)]
         U, V, h, g, l = (torch.cat(t) for t in zip(*parts))
         self.U = nn.Parameter(U)  # [E, d_out, r]
         self.V = nn.Parameter(V)  # [E, d_in, r]
@@ -52,11 +87,8 @@ class _GroupedPath(nn.Module):
         self.l = nn.Parameter(l)  # [E, r]
         self.k = k
 
-    def factors(self) -> tuple[torch.Tensor, torch.Tensor]:
-        """Scaled binary factors: A = g ⊙ sign(V) [E, d_in, r], B = (h ⊙ sign(U) ⊙ ℓ)ᵀ [E, r, d_out]."""
-        a = smooth_sign(self.V, self.k) * self.g[..., None]
-        b = smooth_sign(self.U, self.k) * self.h[..., None] * self.l[..., None, :]
-        return a, b.mT
+    def latents(self) -> tuple[torch.Tensor, ...]:
+        return self.U, self.V, self.h, self.g, self.l
 
     @torch.no_grad()
     def effective_weight(self) -> torch.Tensor:
@@ -69,25 +101,24 @@ class LittleBitGroupedLinear(nn.Module):
     """E stacked expert matrices W [E, d_out, d_in] as primary + residual LittleBit paths."""
 
     def __init__(self, w: torch.Tensor, r: int, residual: bool = True, k: float = 100.0,
-                 init: str = "svid"):
+                 init: str = "svid", fast_init: bool = True):
         super().__init__()
         self.num_experts, self.out_features, self.in_features = w.shape
-        self.r = r
+        self.r, self.k = r, k
         w = w.detach().float()
-        self.primary = _GroupedPath(w, r, k, init)
+        self.primary = _GroupedPath(w, r, k, init, fast=fast_init)
         self.residual = None
         if residual:
-            self.residual = _GroupedPath(w - self.primary.effective_weight(), r, k, init)
+            self.residual = _GroupedPath(w - self.primary.effective_weight(), r, k, init, fast=fast_init)
 
     def paths(self):
         return [self.primary] + ([self.residual] if self.residual is not None else [])
 
     def forward(self, x: torch.Tensor, offs: torch.Tensor) -> torch.Tensor:
-        a, b = zip(*(p.factors() for p in self.paths()))
-        a, b = torch.cat(a, -1), torch.cat(b, -2)  # both paths share the two grouped matmuls
-        pad = -a.shape[-1] % 8  # grouped GEMM kernels need 16-byte strides; zero rank columns are inert
-        if pad:
-            a, b = F.pad(a, (0, pad)), F.pad(b, (0, 0, 0, pad))
+        dev = x.device.type
+        dtype = torch.get_autocast_dtype(dev) if torch.is_autocast_enabled(dev) else x.dtype
+        # both paths share the two grouped matmuls
+        a, b = scaled_signs([p.latents() for p in self.paths()], self.k, dtype)
         return grouped_mm(grouped_mm(x, a, offs), b, offs)
 
     @torch.no_grad()
@@ -115,12 +146,12 @@ class LittleBitExperts(nn.Module):
     """
 
     def __init__(self, experts: nn.Module, r_gate_up: int, r_down: int, residual: bool = True,
-                 k: float = 100.0, init: str = "svid"):
+                 k: float = 100.0, init: str = "svid", fast_init: bool = True):
         super().__init__()
         self.num_experts = experts.gate_up_proj.shape[0]
         self.act_fn = experts.act_fn
-        self.gate_up = LittleBitGroupedLinear(experts.gate_up_proj, r_gate_up, residual, k, init)
-        self.down = LittleBitGroupedLinear(experts.down_proj, r_down, residual, k, init)
+        self.gate_up = LittleBitGroupedLinear(experts.gate_up_proj, r_gate_up, residual, k, init, fast_init)
+        self.down = LittleBitGroupedLinear(experts.down_proj, r_down, residual, k, init, fast_init)
 
     def forward(self, hidden_states: torch.Tensor, top_k_index: torch.Tensor,
                 top_k_weights: torch.Tensor) -> torch.Tensor:
@@ -128,7 +159,8 @@ class LittleBitExperts(nn.Module):
         flat = top_k_index.reshape(-1)
         order = torch.argsort(flat, stable=True)  # (token, slot) pairs grouped by expert
         token_idx = order // top_k
-        counts = torch.bincount(flat, minlength=self.num_experts)
+        # bincount(minlength=) syncs with the host on CUDA; scatter_add does not
+        counts = flat.new_zeros(self.num_experts).scatter_add_(0, flat, torch.ones_like(flat))
         offs = torch.cumsum(counts, 0).to(torch.int32)
         gate, up = self.gate_up(hidden_states[token_idx], offs).chunk(2, dim=-1)
         out = self.down(self.act_fn(gate) * up, offs)
