@@ -43,10 +43,10 @@ def layer_bits(r: int, d_out: int, d_in: int, residual: bool = True) -> int:
 
 
 def _rank1_abs(m: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """Best rank-1 approximation |m| ≈ a·bᵀ with a, b >= 0."""
+    """Best rank-1 approximation |m| ≈ a·bᵀ with a, b >= 0 (batched over leading dims)."""
     u, s, vh = torch.linalg.svd(m.abs(), full_matrices=False)
-    a = u[:, 0] * s[0].sqrt()
-    b = vh[0] * s[0].sqrt()
+    a = u[..., :, 0] * s[..., :1].sqrt()
+    b = vh[..., 0, :] * s[..., :1].sqrt()
     # Perron vectors of a non-negative matrix share a sign; make them positive.
     return a.abs(), b.abs()
 
@@ -56,14 +56,24 @@ def joint_itq(U: torch.Tensor, V: torch.Tensor, n_iter: int = 50) -> torch.Tenso
 
     Finds an orthogonal R (r×r) aligning Z = [U; V] with the binary hypercube:
     min ||sign(ZR) - ZR||. Since (UR)(VR)ᵀ = UVᵀ, W is unchanged.
+    Leading dims are batch dims (e.g. one R per MoE expert).
     """
-    Z = torch.cat([U, V], dim=0)
-    R = nn.init.orthogonal_(torch.empty(U.shape[1], U.shape[1], dtype=Z.dtype, device=Z.device))
+    Z = torch.cat([U, V], dim=-2)
+    R = _random_orthogonal(Z.shape[:-2], U.shape[-1], Z)
     for _ in range(n_iter):
         B = torch.where(Z @ R >= 0, 1.0, -1.0)
-        phi, _, psi_t = torch.linalg.svd(B.T @ Z, full_matrices=False)
-        R = psi_t.T @ phi.T
+        phi, _, psi_t = torch.linalg.svd(B.mT @ Z, full_matrices=False)
+        R = psi_t.mT @ phi.mT
     return R
+
+
+def _random_orthogonal(batch: torch.Size, r: int, like: torch.Tensor) -> torch.Tensor:
+    """Random orthogonal r×r matrix, or a batch of them (one per expert)."""
+    kw = {"dtype": like.dtype, "device": like.device}
+    if not batch:
+        return nn.init.orthogonal_(torch.empty(r, r, **kw))
+    q, rr = torch.linalg.qr(torch.randn(*batch, r, r, **kw))
+    return q * torch.diagonal(rr, dim1=-2, dim2=-1).sign()[..., None, :]
 
 
 def dual_svid(w: torch.Tensor, r: int, init: str = "svid", itq_iters: int = 50):
@@ -72,18 +82,20 @@ def dual_svid(w: torch.Tensor, r: int, init: str = "svid", itq_iters: int = 50):
     init: "svid" (LittleBit), "rot" (random latent rotation), "itq" (LittleBit-2 Joint-ITQ),
     or "empty" (shapes only, no SVD — for loading a trained checkpoint).
     Returns latent factors U (d_out×r), V (d_in×r) and scales h, g, ℓ.
+    w may carry leading batch dims (stacked MoE experts); everything is then per batch entry.
     """
     w = w.float()
     if init == "empty":
-        (d_out, d_in), kw = w.shape, {"device": w.device}
-        return (torch.zeros(d_out, r, **kw), torch.zeros(d_in, r, **kw),
-                torch.ones(d_out, **kw), torch.ones(d_in, **kw), torch.ones(r, **kw))
+        *b, d_out, d_in = w.shape
+        kw = {"device": w.device}
+        return (torch.zeros(*b, d_out, r, **kw), torch.zeros(*b, d_in, r, **kw),
+                torch.ones(*b, d_out, **kw), torch.ones(*b, d_in, **kw), torch.ones(*b, r, **kw))
     u, s, vh = torch.linalg.svd(w, full_matrices=False)
-    sq = s[:r].sqrt()
-    U = u[:, :r] * sq           # W ≈ U Vᵀ, singular values split evenly
-    V = vh[:r].T * sq
+    sq = s[..., None, :r].sqrt()
+    U = u[..., :, :r] * sq      # W ≈ U Vᵀ, singular values split evenly
+    V = vh[..., :r, :].mT * sq
     if init == "rot":
-        R = nn.init.orthogonal_(torch.empty(r, r, device=w.device))
+        R = _random_orthogonal(w.shape[:-2], r, U)
         U, V = U @ R, V @ R
     elif init == "itq":
         R = joint_itq(U, V, itq_iters)
@@ -160,6 +172,9 @@ class LittleBitLinear(nn.Module):
 
     def storage_bits(self) -> int:
         return layer_bits(self.r, self.out_features, self.in_features, self.residual is not None)
+
+    def num_weights(self) -> int:
+        return self.out_features * self.in_features
 
     def extra_repr(self) -> str:
         bpw = self.storage_bits() / (self.out_features * self.in_features)

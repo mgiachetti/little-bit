@@ -1,0 +1,11 @@
+128 experts, H=2048, I=768, top-8, 4096 tokens, ranks 224/137, bf16, NVIDIA L40S
+grouped  init  164.9s   fwd+bwd    107.9 ms   peak mem 4.22 GB
+loop     init  169.2s   fwd+bwd    541.6 ms   peak mem 3.75 GB
+speed-up: 5.0x
+128 experts, H=2048, I=768, top-8, 4096 tokens, ranks 224/137, fp32, NVIDIA L40S
+grouped  init  164.8s   fwd+bwd    105.0 ms   peak mem 4.93 GB
+loop     init  169.2s   fwd+bwd    467.8 ms   peak mem 5.29 GB
+speed-up: 4.5x
+128 experts, H=2048, I=768, top-8, 16384 tokens, ranks 224/137, bf16, NVIDIA L40S
+grouped  init  165.1s   fwd+bwd    126.8 ms   peak mem 7.04 GB
+ALLDONE

@@ -1,7 +1,9 @@
-"""Swap the nn.Linear layers inside transformer blocks for LittleBitLinear."""
+"""Swap the nn.Linear layers inside transformer blocks for LittleBitLinear,
+and the stacked MoE experts (3D gate_up_proj / down_proj) for LittleBitExperts."""
 
 import torch.nn as nn
 
+from .experts import LittleBitExperts, LittleBitGroupedLinear
 from .layer import LittleBitLinear, rank_for_bpw
 
 # lm_head and embeddings stay in full precision (paper, Appendix I).
@@ -18,6 +20,12 @@ def _is_gqa_kv(model: nn.Module, name: str, linear: nn.Linear) -> bool:
     return isinstance(q, nn.Module) and linear.out_features < q.out_features
 
 
+def _is_experts(m: nn.Module) -> bool:
+    """transformers MoE experts module: per-expert weights stacked as 3D parameters."""
+    return all(isinstance(getattr(m, a, None), nn.Parameter) and getattr(m, a).dim() == 3
+               for a in ("gate_up_proj", "down_proj"))
+
+
 def convert_model(model: nn.Module, bpw: float, residual: bool = True,
                   kv_rank_mult: float = 4.0, k: float = 100.0, init: str = "svid",
                   keep: tuple[str, ...] = (), verbose: bool = True) -> nn.Module:
@@ -28,14 +36,24 @@ def convert_model(model: nn.Module, bpw: float, residual: bool = True,
     keep: module-name suffixes left in full precision (e.g. "layers.2.mlp.down_proj").
     """
     targets = [(n, m) for n, m in model.named_modules()
-               if isinstance(m, nn.Linear) and not any(s in n for s in SKIP)
+               if (isinstance(m, nn.Linear) or _is_experts(m)) and not any(s in n for s in SKIP)
                and not any(n.endswith(k) for k in keep)]
+
+    def rank(d_out: int, d_in: int) -> int:
+        return min(rank_for_bpw(bpw, d_out, d_in, residual), d_out, d_in)
+
     for i, (name, linear) in enumerate(targets):
-        r = rank_for_bpw(bpw, linear.out_features, linear.in_features, residual)
-        if _is_gqa_kv(model, name, linear):
-            r = round(r * kv_rank_mult)
-        r = min(r, min(linear.out_features, linear.in_features))
-        new = LittleBitLinear(linear, r, residual=residual, k=k, init=init).to(linear.weight.device)
+        if _is_experts(linear):
+            (_, gu_out, gu_in), (_, d_out, d_in) = linear.gate_up_proj.shape, linear.down_proj.shape
+            r = (rank(gu_out, gu_in), rank(d_out, d_in))
+            new = LittleBitExperts(linear, *r, residual=residual, k=k, init=init)
+            new.to(linear.gate_up_proj.device)
+        else:
+            r = rank_for_bpw(bpw, linear.out_features, linear.in_features, residual)
+            if _is_gqa_kv(model, name, linear):
+                r = round(r * kv_rank_mult)
+            r = min(r, min(linear.out_features, linear.in_features))
+            new = LittleBitLinear(linear, r, residual=residual, k=k, init=init).to(linear.weight.device)
         parent_name, _, child = name.rpartition(".")
         setattr(model.get_submodule(parent_name), child, new)
         if verbose:
@@ -48,14 +66,17 @@ def convert_model(model: nn.Module, bpw: float, residual: bool = True,
 def bpw_report(model: nn.Module) -> dict:
     """Effective BPW over the converted layers, and total model size in MB."""
     lb_bits = lb_params = other_params = kept_params = 0
+    lb_types = (LittleBitLinear, LittleBitGroupedLinear)
     for m in model.modules():
-        if isinstance(m, LittleBitLinear):
+        if isinstance(m, lb_types):
             lb_bits += m.storage_bits()
-            lb_params += m.in_features * m.out_features
+            lb_params += m.num_weights()
     for n, m in model.named_modules():
         if isinstance(m, nn.Linear) and not any(s in n for s in SKIP):
             kept_params += m.weight.numel()  # body linears left in full precision
-    lb_param_ids = {id(p) for m in model.modules() if isinstance(m, LittleBitLinear)
+        elif _is_experts(m) and not any(s in n for s in SKIP):
+            kept_params += m.gate_up_proj.numel() + m.down_proj.numel()
+    lb_param_ids = {id(p) for m in model.modules() if isinstance(m, lb_types)
                     for n, p in m.named_parameters() if not n.endswith("bias")}
     seen = set()
     for p in model.parameters():
