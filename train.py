@@ -109,6 +109,8 @@ def main():
     p.add_argument("--eval-batches", type=int, default=40, help="cap for periodic evals (final eval is full)")
     p.add_argument("--precision", choices=["fp32", "tf32", "bf16"], default="fp32",
                    help="bf16 = autocast forward with FP32 master weights (CUDA)")
+    p.add_argument("--optim", choices=["adam", "adam8bit"], default="adam",
+                   help="adam8bit: bitsandbytes blockwise 8-bit moments (~4x less optimizer memory)")
     p.add_argument("--device", default="auto")
     p.add_argument("--out", default="runs")
     p.add_argument("--tag", default="", help="suffix for the run directory")
@@ -159,7 +161,11 @@ def main():
           f"({args.steps * tokens_per_step / len(data) / args.seq_len:.2f} epochs over {args.steps} steps)")
     params = [p for p in student.parameters() if p.requires_grad]
     print(f"trainable params: {sum(p.numel() for p in params) / 1e6:.1f}M")
-    opt = torch.optim.Adam(params, lr=args.lr, betas=(0.9, 0.999))
+    if args.optim == "adam8bit":
+        import bitsandbytes as bnb
+        opt = bnb.optim.Adam8bit(params, lr=args.lr, betas=(0.9, 0.999))
+    else:
+        opt = torch.optim.Adam(params, lr=args.lr, betas=(0.9, 0.999))
 
     start, cursor = 0, 0
     if args.ckpt_every and ckpt_path.exists():

@@ -4,8 +4,11 @@ W ≈ diag(h) · sign(U) · diag(ℓ) · sign(V)ᵀ · diag(g)            (Eq. 4
 plus a parallel residual path with the same structure        (Eq. 9-10).
 """
 
+import warnings
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class SmoothSign(torch.autograd.Function):
@@ -26,6 +29,40 @@ class SmoothSign(torch.autograd.Function):
 
 def smooth_sign(x: torch.Tensor, k: float = 100.0) -> torch.Tensor:
     return SmoothSign.apply(x, k)
+
+
+def _scaled_signs(paths: list[tuple[torch.Tensor, ...]], k: float, dtype: torch.dtype):
+    """Concatenated scaled binary factors of all paths, rank padded to a multiple of 8.
+
+    A = [g ⊙ sign(V)]  [.., d_in, R],  B = [h ⊙ sign(U) ⊙ ℓ]ᵀ  [.., R, d_out]  (leading dims: experts).
+    Folding the scales here keeps elementwise work off the activations; what is left is
+    elementwise work over the latents, compiled on CUDA into a few fused kernels.
+    """
+    a = torch.cat([smooth_sign(V, k) * g[..., None] for U, V, h, g, l in paths], -1)
+    b = torch.cat([smooth_sign(U, k) * h[..., None] * l[..., None, :] for U, V, h, g, l in paths], -1)
+    pad = -a.shape[-1] % 8  # grouped GEMM kernels need 16-byte strides; zero rank columns are inert
+    if pad:
+        a, b = F.pad(a, (0, pad)), F.pad(b, (0, pad))
+    return a.to(dtype), b.mT.to(dtype)
+
+
+_scaled_signs_compiled = torch.compile(_scaled_signs, dynamic=False)
+# one specialization per (shape, rank, grad mode): a model has more than dynamo's default 8
+torch._dynamo.config.recompile_limit = max(torch._dynamo.config.recompile_limit, 64)
+_compile_ok = True
+
+
+def scaled_signs(paths: list[tuple[torch.Tensor, ...]], k: float, dtype: torch.dtype):
+    """_scaled_signs, compiled where Triton works (CUDA sm70+), eager otherwise or if compiling fails."""
+    global _compile_ok
+    x = paths[0][0]
+    if _compile_ok and x.is_cuda and torch.cuda.get_device_capability(x.device) >= (7, 0):
+        try:
+            return _scaled_signs_compiled(paths, k, dtype)
+        except Exception as e:  # e.g. no C compiler / Python headers for Triton
+            warnings.warn(f"torch.compile unavailable, using eager LittleBit factors: {e!r:.200}")
+            _compile_ok = False
+    return _scaled_signs(paths, k, dtype)
 
 
 def rank_for_bpw(bpw: float, d_out: int, d_in: int, residual: bool = True) -> int:
@@ -165,13 +202,13 @@ class _Path(nn.Module):
         self.l = nn.Parameter(l)
         self.k = k
 
+    def latents(self) -> tuple[torch.Tensor, ...]:
+        return self.U, self.V, self.h, self.g, self.l
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Y = ((((X ⊙ g) V_sign) ⊙ ℓ) U_signᵀ) ⊙ h       (Eq. 5)
-        v = smooth_sign(self.V, self.k).to(x.dtype)
-        u = smooth_sign(self.U, self.k).to(x.dtype)
-        y = (x * self.g.to(x.dtype)) @ v
-        y = (y * self.l.to(x.dtype)) @ u.T
-        return y * self.h.to(x.dtype)
+        # Y = ((((X ⊙ g) V_sign) ⊙ ℓ) U_signᵀ) ⊙ h       (Eq. 5), scales folded into the factors
+        a, b = scaled_signs([self.latents()], self.k, x.dtype)
+        return x @ a @ b
 
     @torch.no_grad()
     def effective_weight(self) -> torch.Tensor:
@@ -200,10 +237,14 @@ class LittleBitLinear(nn.Module):
         if linear.bias is not None:
             self.bias = nn.Parameter(linear.bias.detach().float().clone())
 
+    def paths(self):
+        return [self.primary] + ([self.residual] if self.residual is not None else [])
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        y = self.primary(x)
-        if self.residual is not None:
-            y = y + self.residual(x)
+        # Eq. 5 with the scales folded into the binary factors and both paths concatenated along
+        # the rank: two matmuls per layer and no elementwise passes over the activations.
+        a, b = scaled_signs([p.latents() for p in self.paths()], self.primary.k, x.dtype)
+        y = x @ a @ b
         if self.bias is not None:
             y = y + self.bias.to(y.dtype)
         return y

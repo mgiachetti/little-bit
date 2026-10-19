@@ -12,13 +12,10 @@ and the primary and residual paths are concatenated along the rank, so both path
 together are still two grouped matmuls.
 """
 
-import warnings
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from .layer import dual_svid, layer_bits, smooth_sign
+from .layer import dual_svid, layer_bits, scaled_signs
 
 try:  # native grouped GEMM on sm80+ (and recent CPU builds), per-expert loop with autograd otherwise
     from transformers.integrations.moe import _grouped_mm
@@ -37,38 +34,6 @@ def grouped_mm(x: torch.Tensor, w: torch.Tensor, offs: torch.Tensor) -> torch.Te
         out.append(x[start:end] @ w[e].to(x.dtype))
         start = end
     return torch.cat(out)
-
-
-def _scaled_signs(paths: list[tuple[torch.Tensor, ...]], k: float, dtype: torch.dtype):
-    """Concatenated scaled binary factors of all paths, rank padded to a multiple of 8.
-
-    A = [g ⊙ sign(V)]  [E, d_in, R],  B = [h ⊙ sign(U) ⊙ ℓ]ᵀ  [E, R, d_out].
-    This is pure elementwise work over every expert's latents and, unfused, costs far more
-    than the grouped matmuls themselves; on CUDA it is compiled into a few fused kernels.
-    """
-    a = torch.cat([smooth_sign(V, k) * g[..., None] for U, V, h, g, l in paths], -1)
-    b = torch.cat([smooth_sign(U, k) * h[..., None] * l[..., None, :] for U, V, h, g, l in paths], -1)
-    pad = -a.shape[-1] % 8  # grouped GEMM kernels need 16-byte strides; zero rank columns are inert
-    if pad:
-        a, b = F.pad(a, (0, pad)), F.pad(b, (0, pad))
-    return a.to(dtype), b.mT.to(dtype)
-
-
-_scaled_signs_compiled = torch.compile(_scaled_signs, dynamic=False)
-_compile_ok = True
-
-
-def scaled_signs(paths: list[tuple[torch.Tensor, ...]], k: float, dtype: torch.dtype):
-    """_scaled_signs, compiled where Triton works (CUDA sm70+), eager otherwise or if compiling fails."""
-    global _compile_ok
-    x = paths[0][0]
-    if _compile_ok and x.is_cuda and torch.cuda.get_device_capability(x.device) >= (7, 0):
-        try:
-            return _scaled_signs_compiled(paths, k, dtype)
-        except Exception as e:  # e.g. no C compiler / Python headers for Triton
-            warnings.warn(f"torch.compile unavailable, using eager LittleBit expert factors: {e!r:.200}")
-            _compile_ok = False
-    return _scaled_signs(paths, k, dtype)
 
 
 class _GroupedPath(nn.Module):
