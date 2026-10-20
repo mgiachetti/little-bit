@@ -62,9 +62,10 @@ def kd_loss(student, teacher, ids, lam: float, mse_norm: bool = False, mse_skip:
     # Skip index 0 (embedding output, identical for both models).
     pairs = [(s[:, mse_skip:], t[:, mse_skip:])
              for s, t in zip(s_out.hidden_states[1:], t_out.hidden_states[1:])]
-    mse = sum(F.mse_loss(s.float(), t.float()) / (t.float().pow(2).mean() if mse_norm else 1)
-              for s, t in pairs) / len(pairs)
-    return kl + lam * mse, kl, mse
+    per_layer = torch.stack([F.mse_loss(s.float(), t.float()) / (t.float().pow(2).mean() if mse_norm else 1)
+                             for s, t in pairs])
+    mse = per_layer.mean()
+    return kl + lam * mse, kl, mse, per_layer.detach()
 
 
 def lr_at(step: int, total: int, peak: float, warmup_frac: float) -> float:
@@ -111,6 +112,8 @@ def main():
                    help="bf16 = autocast forward with FP32 master weights (CUDA)")
     p.add_argument("--optim", choices=["adam", "adam8bit"], default="adam",
                    help="adam8bit: bitsandbytes blockwise 8-bit moments (~4x less optimizer memory)")
+    p.add_argument("--skip-spikes", type=float, default=0,
+                   help="skip the update when the loss exceeds this × its running mean (0: off)")
     p.add_argument("--device", default="auto")
     p.add_argument("--out", default="runs")
     p.add_argument("--tag", default="", help="suffix for the run directory")
@@ -175,21 +178,34 @@ def main():
         start, cursor = ck["step"], ck["cursor"]
         print(f"resumed from {ckpt_path} at step {start}", flush=True)
     names = {id(p): n for n, p in student.named_parameters()}
+    loss_ema, skipped = None, 0
     t0 = time.time()
     for step in range(start, args.steps):
         student.train()
         for group in opt.param_groups:
             group["lr"] = lr_at(step, args.steps, args.lr, args.warmup)
+        step_loss = 0.0
         for _ in range(args.grad_accum):
             if cursor + args.batch_size > len(data):
                 cursor = 0
             ids = data[cursor:cursor + args.batch_size].to(device)
             cursor += args.batch_size
             with autocast:
-                loss, kl, mse = kd_loss(student, teacher, ids, args.lam, args.mse_norm, args.mse_skip_first)
+                loss, kl, mse, per_layer = kd_loss(student, teacher, ids, args.lam, args.mse_norm,
+                                                   args.mse_skip_first)
             (loss / args.grad_accum).backward()
-        torch.nn.utils.clip_grad_norm_(params, 1.0)
-        opt.step()
+            step_loss += loss.item() / args.grad_accum
+        # A transient blow-up of the student on one batch (KL back to init level) would push a
+        # garbage gradient into Adam's moments; drop that update instead.
+        if args.skip_spikes and loss_ema is not None and step_loss > args.skip_spikes * loss_ema:
+            skipped += 1
+            worst = per_layer.argmax().item()
+            print(f"step {step:5d}  SKIP loss {step_loss:.1f} (ema {loss_ema:.2f})  kl {kl.item():.2f}  "
+                  f"worst layer {worst} mse {per_layer[worst].item():.1f}  skipped {skipped}", flush=True)
+        else:
+            torch.nn.utils.clip_grad_norm_(params, 1.0)
+            opt.step()
+            loss_ema = step_loss if loss_ema is None else 0.98 * loss_ema + 0.02 * step_loss
         opt.zero_grad(set_to_none=True)
 
         if step % 20 == 0:
