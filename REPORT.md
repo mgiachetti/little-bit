@@ -4,11 +4,11 @@
 
 ## Summary
 
-We re-implemented sub-1-bit LLM compression via binarized low-rank factorization — **LittleBit** (Lee et al., NeurIPS 2025, [arXiv:2506.13771](https://arxiv.org/abs/2506.13771)) and its initialization upgrade **LittleBit-2** (Lee & Kim, ICML 2026, [arXiv:2603.00042](https://arxiv.org/abs/2603.00042)) — from the papers, and evaluated it on two small models at **0.55 bits per weight** using a single consumer GPU (GTX 1080, 8 GB).
+We re-implemented sub-1-bit LLM compression via binarized low-rank factorization — **LittleBit** (Lee et al., NeurIPS 2025, [arXiv:2506.13771](https://arxiv.org/abs/2506.13771)) and its initialization upgrade **LittleBit-2** (Lee & Kim, ICML 2026, [arXiv:2603.00042](https://arxiv.org/abs/2603.00042)) — from the papers, and evaluated it on two small models at **0.55 bits per weight** using a single consumer GPU (GTX 1080, 8 GB) and, for the 1B-token run, a single rented L40S (48 GB).
 
 - **LittleBit-2's Joint-ITQ initialization reproduces.** On OPT-125M, with an identical training recipe, it lowers final WikiText-2 perplexity from 199.1 to **132.7 (−33%)** and converges faster from the first evaluation.
 - **Qwen3-0.6B breaks the paper's distillation loss.** Its residual stream carries a ~7,000-valued "attention sink" activation on token 0 (dimension 35), written by block 2's MLP. It holds up to 99.8% of hidden-state energy, so the paper's hidden-state MSE term is dominated by a single scalar. **Excluding position 0 from the MSE and normalizing it per layer** lowers perplexity **2.7×** after 300 steps (2,238 → 820).
-- **With that fix and ~107M training tokens, Qwen3-0.6B at 0.55 BPW reaches WikiText-2 PPL 36.43 vs. 20.95 in full precision (1.74×).** The paper reports 1.60–1.91× at the same bit-width on models 2–12× larger trained on ~10× more tokens. The transformer blocks shrink from ~840 MB (BF16) to **~29 MB**; the whole model from ~1.1 GB to ~326 MB, because the FP16 embedding table dominates.
+- **With that fix and ~1B training tokens, Qwen3-0.6B at 0.55 BPW reaches WikiText-2 PPL 30.64 vs. 20.95 in full precision (1.46×)**, down from 36.43 (1.74×) with ~107M tokens. The paper reports 1.60–1.91× at the same bit-width and a similar token budget, on models 2–12× larger. The transformer blocks shrink from ~840 MB (BF16) to **~29 MB**; the whole model from ~1.1 GB to ~326 MB, because the FP16 embedding table dominates.
 
 All numbers come from single runs (no error bars). The comparison to the papers is across different models and token budgets.
 
@@ -106,15 +106,22 @@ These are short runs from a single seed. The ranking held in every longer run we
 |---|---|---|---|---|---|
 | A | WikiText-2 | 300 × 2,048 | 0.6M | 819.67 | 39× |
 | B | WikiText-2 | 2,000 × 2,048 | 4.1M | 218.35 | 10.4× |
-| **C** | **C4 (100M) + 4 × WikiText-2** | **26,000 × 4,096** | **106.5M** | **36.43** | **1.74×** |
+| C | C4 (100M) + 4 × WikiText-2 | 26,000 × 4,096 | 106.5M | 36.43 | 1.74× |
+| **D** | **C4 (1,000M) + 4 × WikiText-2** | **245,000 × 4,096** | **1,003.5M** | **30.64** | **1.46×** |
 
-All three use Joint-ITQ, skip-token-0 + relative MSE, and lr 8e-5 with cosine decay. A and B use 512-token sequences; C uses 2,048 tokens, matching the paper and the evaluation. Run C took **66.5 hours on a GTX 1080** (9.2 s/step, 6.83 GB peak, gradient checkpointing, logits computed in 128-token chunks). It checkpointed every 250 steps but never needed to resume.
+All four use Joint-ITQ, skip-token-0 + relative MSE, and lr 8e-5 with cosine decay. A and B use 512-token sequences; C and D use 2,048 tokens, matching the paper and the evaluation. Run C took **66.5 hours on a GTX 1080** (9.2 s/step, 6.83 GB peak, gradient checkpointing, logits computed in 128-token chunks). Run D took **71.9 hours on an L40S** (TF32, batch 2 × 2,048 without gradient checkpointing, 1.06 s/step, 41.7 GB peak). Both checkpointed regularly but never needed to resume.
 
 ![Qwen3-0.6B: run C](results/figures/qwen3_long_run.png)
 
-Perplexity on the first 20 evaluation windows was still falling at the end (33.86 → 33.55 → 33.24 over the last three evaluations), so more data should help further.
+At equal tokens, run D trails run C (≈50 vs. ≈33 PPL at 100M tokens): its cosine schedule is ten times longer, so the learning rate is still near its peak there. Run D only pulls ahead late in training, as the learning rate anneals. Its intermediate evaluations are also noisier, swinging by ±3 PPL between consecutive checkpoints. Going from 107M to 1B tokens closed a little under half of the gap to full precision (1.74× → 1.46×); the returns per token are clearly diminishing.
 
-**Samples (greedy, repetition penalty 1.1)**, run C:
+**Samples (greedy, repetition penalty 1.1)**, run D:
+
+> *Leonardo da Vinci painted the Mona Lisa. The Mona Lisa is* a famous painting of the 19th century, and it was one of the most popular works in the world. It is also known as the "Mona Lisa" by many people. […]
+
+> *Turing is called the father of computer science. Computer science is* a field that has been studied for centuries, and it's one of the most important fields in the world. It's also known as the "computer science" field. The term "computer science" refers to the study of computers, which includes the development of software systems, hardware, and software applications.
+
+Run D's samples are more coherent than run C's but still factually wrong (the Mona Lisa is from the 16th century). Run C, for comparison:
 
 > *Leonardo da Vinci painted the Mona Lisa. The Mona Lisa is* a painting of a woman who has been in the world for 10 years, and she is a woman who has lived in the world for many years. She is also known as the Mona Lisa. […]
 
@@ -140,7 +147,8 @@ At this scale the FP16 embedding table dominates the compressed model, as both p
 | OPT-1.3B | LittleBit (paper) | ~1B | 23.35 | 14.62 | 1.60× |
 | Llama-2-7B | LittleBit (paper) | ~1B | 10.47 | 5.47 | 1.91× |
 | Llama-2-7B | LittleBit-2 (paper) | ~1B | 9.65 | 5.47 | 1.76× |
-| **Qwen3-0.6B** | **LittleBit-2 + sink-aware loss (ours)** | **0.1B** | **36.43** | **20.95** | **1.74×** |
+| Qwen3-0.6B | LittleBit-2 + sink-aware loss (ours) | 0.1B | 36.43 | 20.95 | 1.74× |
+| **Qwen3-0.6B** | **LittleBit-2 + sink-aware loss (ours)** | **1.0B** | **30.64** | **20.95** | **1.46×** |
 
 Ratios are the most comparable quantity across models, but they still mix model families, sizes and data budgets. Qwen3-0.6B is also the post-trained (hybrid-thinking) checkpoint, not a base model.
 
@@ -148,8 +156,8 @@ Ratios are the most comparable quantity across models, but they still mix model 
 
 - **Single runs, no error bars, one seed.** Learning rates were not swept (the paper sweeps 4e-5 to 2.4e-4); 8e-5 and 1.2e-4 were chosen once.
 - **Perplexity only.** Evaluation is WikiText-2 perplexity on 2,048-token windows. We did not run the zero-shot reasoning benchmarks (ARC, HellaSwag, PIQA, WinoGrande, BoolQ, OBQA) that the papers report.
-- **Noisy intermediate evaluations.** Mid-training numbers use the first 20 test windows and run 1.1–1.35× below the full-test number (1.10× in run C, 1.2–1.35× in the shorter runs). Only "final" numbers are full-test.
-- **Training data.** We used ~0.1B tokens versus the papers' ~1B.
+- **Noisy intermediate evaluations.** Mid-training numbers use the first 20 test windows and run 1.1–1.35× below the full-test number (1.03× in run D, 1.10× in run C, 1.2–1.35× in the shorter runs). Only "final" numbers are full-test.
+- **Training data.** Run D matches the papers' ~1B tokens, but on C4 rather than their mix, and for a single epoch.
 - **The loss fix is tuned on Qwen3-0.6B.** We have not verified that it is neutral on models without attention sinks, or how it interacts with the paper's λ.
 - **Memory pressure.** Run B hit the 8 GB limit and the CUDA allocator logged ~4,000 retry warnings; training completed normally. Run C used smaller logit chunks and did not.
 - **No packed inference yet.** There are no latency measurements.
@@ -170,25 +178,29 @@ python train.py --model Qwen/Qwen3-0.6B --init itq --bpw 0.55 --kv-rank-mult 1 \
   --lr 8e-5 --steps 26000 --c4-mtokens 100 --wiki-repeat 4 --eval-every 1000 --eval-batches 20 \
   --ckpt-every 250 --tag c4
 
+# Qwen3-0.6B run D (§3.3), one L40S 48 GB — see scripts/qwen_c4_1b.sh
+python train.py --model Qwen/Qwen3-0.6B --init itq --bpw 0.55 --kv-rank-mult 1 --precision tf32 \
+  --mse-norm --mse-skip-first 1 --seq-len 2048 --batch-size 2 --lr 8e-5 --steps 245000 \
+  --c4-mtokens 1000 --wiki-repeat 4 --eval-every 5000 --eval-batches 20 --ckpt-every 1000 --tag c4-1b
+
 # Re-evaluate a saved model; analysis scripts; figures
 python eval_checkpoint.py runs/Qwen3-0.6B-bpw0.55-itq-msenorm-skip1-c4/littlebit.pt
 python scripts/teacher_ppl.py facebook/opt-125m Qwen/Qwen3-0.6B
 python scripts/compare_init.py && python scripts/attention_sink.py && python scripts/make_figures.py
 ```
 
-Reloading the run C checkpoint with `eval_checkpoint.py` reproduces PPL 36.43 and the samples above exactly. Training logs for every run cited here are in [`results/logs/`](results/logs/), with progress bars and allocator warnings stripped.
+Reloading the run C and run D checkpoints with `eval_checkpoint.py` reproduces PPL 36.43 and 30.64 and the samples above exactly (run D was re-evaluated on a different machine, an Apple M4). Training logs for every run cited here are in [`results/logs/`](results/logs/), with progress bars and allocator warnings stripped.
 
 ## 7. Next steps
 
-1. **More tokens.** The curve was still descending at 107M. We estimate ~1B tokens takes 1–2 days on a single A100, H100 or RTX 5090 with BF16, versus ~25 days on the GTX 1080.
+1. **Scale up (in progress).** A Qwen3-4B run at 0.55 BPW on ~500M tokens is training on one L40S (8-bit Adam, gradient checkpointing). Mixture-of-experts layers (Qwen3-30B-A3B) are implemented with grouped GEMMs and need multi-GPU training next.
 2. **Non-uniform rank allocation.** Allocate the bit budget by per-layer sensitivity or spectral decay, which both papers list as future work.
-3. **Scale up.** Move to a 4–9B model (single large GPU), then to ~27–32B (multi-GPU, FSDP).
-4. **Bit-packing and a packed inference kernel**, to report real memory and latency.
-5. **Zero-shot benchmarks**, to complement perplexity.
+3. **Bit-packing and a packed inference kernel**, to report real memory and latency.
+4. **Zero-shot benchmarks**, to complement perplexity.
 
 ## Acknowledgements
 
-The experiments in this report ran on a personal GTX 1080. GPU compute for the next steps above is sponsored by [CloudRift](https://cloudrift.ai) through their AI research grant.
+Runs A–C ran on a personal GTX 1080. Run D and the ongoing Qwen3-4B run use GPU compute sponsored by [CloudRift](https://cloudrift.ai) through their AI research grant.
 
 ## References
 

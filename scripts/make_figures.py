@@ -42,22 +42,29 @@ def teacher_line(ax, y, label):
 
 
 def fig_qwen_long():
-    pts = evals("qwen_c4.log")
-    tokens = [s * 4096 / 1e6 for s, _ in pts]  # 2048 tokens × batch 1 × grad-accum 2
+    # Both runs train on 2048 × 2 = 4096 tokens/step (C: batch 1 × grad-accum 2; D: batch 2).
+    runs = [("qwen_c4.log", "Run C: 107M tokens, GTX 1080", ORANGE),
+            ("qwen_c4_1b.log", "Run D: 1.0B tokens, L40S", BLUE)]
     fig, ax = plt.subplots(figsize=(8, 4.5))
-    ax.plot(tokens, [p for _, p in pts], color=BLUE, lw=2, marker="o", ms=5, zorder=3)
+    for log, label, color in runs:
+        pts = evals(log)
+        tokens = [s * 4096 / 1e6 for s, _ in pts]
+        ax.plot(tokens, [p for _, p in pts], color=color, lw=2, marker="o", ms=4, zorder=3, label=label)
+        ax.annotate(f"{pts[-1][1]:.2f}", (tokens[-1], pts[-1][1]), xytext=(7, 0), textcoords="offset points",
+                    ha="left", va="center", color=INK, fontsize=10)
+    ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_yticks([20, 30, 50, 100, 200, 300])
     ax.set_ylim(17, 330)
-    ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    ax.set_xlim(right=2000)
+    for axis in (ax.xaxis, ax.yaxis):
+        axis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
     ax.minorticks_off()
     teacher_line(ax, 20.27, "Qwen3-0.6B full precision (20.27)")
-    last_t, last_p = tokens[-1], pts[-1][1]
-    ax.annotate(f"{last_p:.2f}", (last_t, last_p), xytext=(0, 8), textcoords="offset points",
-                ha="center", color=INK, fontsize=10)
-    ax.set_xlabel("Training tokens (millions)")
+    ax.legend(loc="upper right", frameon=False, labelcolor=INK2)
+    ax.set_xlabel("Training tokens (millions, log)")
     ax.set_ylabel("WikiText-2 PPL (first 20 windows, log)")
-    ax.set_title("Qwen3-0.6B at 0.55 BPW: PPL during the 107M-token run")
+    ax.set_title("Qwen3-0.6B at 0.55 BPW: PPL during training")
     fig.tight_layout()
     fig.savefig(OUT / "qwen3_long_run.png", dpi=150)
 
@@ -102,7 +109,8 @@ def fig_opt_init():
 def fig_qwen_tokens():
     pts = [(300 * 2048 / 1e6, final("ab_skip1_norm.log")),
            (2000 * 2048 / 1e6, final("qwen_long.log")),
-           (26000 * 4096 / 1e6, final("qwen_c4.log"))]
+           (26000 * 4096 / 1e6, final("qwen_c4.log")),
+           (245000 * 4096 / 1e6, final("qwen_c4_1b.log"))]
     fig, ax = plt.subplots(figsize=(8, 4.5))
     ax.plot([t for t, _ in pts], [p for _, p in pts], color=BLUE, lw=2, marker="o", ms=7, zorder=3)
     for t, p in pts:

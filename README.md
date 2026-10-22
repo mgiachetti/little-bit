@@ -2,7 +2,7 @@
 
 A from-scratch PyTorch implementation of **sub-1-bit LLM compression** via binarized low-rank factorization: [LittleBit](https://arxiv.org/abs/2506.13771) (NeurIPS 2025) and the Joint-ITQ initialization of [LittleBit-2](https://arxiv.org/abs/2603.00042) (ICML 2026). It also includes a distillation-loss fix for models with attention-sink activations, such as Qwen3.
 
-**Headline result:** Qwen3-0.6B compressed to **0.55 bits per weight** reaches WikiText-2 perplexity **36.43 vs. 20.95** in full precision (**1.74×**). The transformer blocks shrink from ~840 MB to ~29 MB. Training took 66.5 hours on a single **GTX 1080 (8 GB)** with ~107M tokens.
+**Headline result:** Qwen3-0.6B compressed to **0.55 bits per weight** reaches WikiText-2 perplexity **30.64 vs. 20.95** in full precision (**1.46×**) after ~1B training tokens (72 hours on one L40S). The transformer blocks shrink from ~840 MB to ~29 MB. With ~107M tokens, trainable on a single **GTX 1080 (8 GB)** in 66.5 hours, it reaches 36.43 (1.74×).
 
 → **[Technical report](REPORT.md)**: method, ablations, results and limitations.
 
@@ -14,7 +14,8 @@ A from-scratch PyTorch implementation of **sub-1-bit LLM compression** via binar
 | Qwen3-0.6B, full precision | 20.95 |
 | Qwen3-0.6B @ 0.55 BPW, paper loss, 300 steps | 2,238 |
 | Qwen3-0.6B @ 0.55 BPW, sink-aware loss, 300 steps | 820 |
-| Qwen3-0.6B @ 0.55 BPW, sink-aware loss, 107M tokens | **36.43** |
+| Qwen3-0.6B @ 0.55 BPW, sink-aware loss, 107M tokens | 36.43 |
+| Qwen3-0.6B @ 0.55 BPW, sink-aware loss, 1B tokens | **30.64** |
 
 ![Qwen3-0.6B at 0.55 BPW: PPL vs. training tokens](results/figures/qwen3_tokens.png)
 
