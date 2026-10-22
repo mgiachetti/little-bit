@@ -172,10 +172,12 @@ def main():
 
     start, cursor = 0, 0
     if args.ckpt_every and ckpt_path.exists():
-        ck = torch.load(ckpt_path, map_location=device)
+        # Load on CPU: a GPU copy of the whole checkpoint left too little headroom to resume the 4B run.
+        ck = torch.load(ckpt_path, map_location="cpu")
         student.load_state_dict(ck["trainable"], strict=False)
         opt.load_state_dict(ck["opt"])
         start, cursor = ck["step"], ck["cursor"]
+        del ck
         print(f"resumed from {ckpt_path} at step {start}", flush=True)
     names = {id(p): n for n, p in student.named_parameters()}
     loss_ema, skipped = None, 0
